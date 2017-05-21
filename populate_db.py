@@ -1,5 +1,7 @@
+# -*- coding: utf-8 -*-
 # USAGE
-# python populate_db.py --origin videos --destination data/aspect.dat --shape-predictor shape_predictor_68_face_landmarks.dat --type aspect --video true
+# python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type aspect --video false
+
 #
 
 from imutils.video import FileVideoStream
@@ -34,8 +36,10 @@ def populate_aspect_ratio():
     for file in allfiles:
         if file.endswith(".mov"):
             # start the video stream thread
+            file_name = file[:-4]
+            print ("Filename: {}".format(file_name))
 
-            print("[INFO] starting video stream thread... file: {}".format(join(args["origin"],file)))
+            print("[INFO] starting video stream thread... file: {}".format(join(args["origin"], file)))
             vs = FileVideoStream(join(args["origin"], file)).start()
 
             fileStream = True
@@ -95,18 +99,29 @@ def populate_aspect_ratio():
                 if args["video"] is "true":
                     cv2.imshow("Frame", frame)
 
-            words[file].append(pronounced_word)
+            words[file_name].append(pronounced_word)
 
             # do a bit of cleanup
             cv2.destroyAllWindows()
             vs.stop()
-            print ("After stop")
 
     # save into destination
-    print("**Save data {}".format(words))
 
-    with open(args["destination"], 'wb') as handle:
+
+    with open("{}{}".format(args["destination"], "_aspect.dat"), 'wb') as handle:
         pickle.dump(words, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    mean = defaultdict(list)
+    for key in words.keys():
+        word_features = words[key]
+        for word in word_features:
+            print ("word: {}".format(word))
+            mean[key].append(sum(word)/float(len(word)))
+
+    print("Mean values: {}".format(mean))
+
+    with open("{}{}".format(args["destination"], "_mean.dat"), 'wb') as handle:
+            pickle.dump(mean, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # with open(args["destination"], 'rb') as handle:
     #     b = pickle.load(handle)
@@ -128,10 +143,10 @@ ap.add_argument("-d", "--destination", required=True, type=str, default="",
 ap.add_argument("-p", "--shape-predictor", required=True,
 	help="path to facial landmark predictor")
 
-ap.add_argument("-t", "--type", type=str, default="",
+ap.add_argument("-t", "--type", type=str, default="aspect",
 	help="aspect based or full points approach params: aspect, dots")
 
-ap.add_argument("-v", "--video", type=str, default="",
+ap.add_argument("-v", "--video", type=str, default="false",
 	help="is need to show video when extracting features")
 
 args = vars(ap.parse_args())

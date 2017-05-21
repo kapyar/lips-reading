@@ -1,60 +1,34 @@
+# -*- coding: utf-8 -*-
 # USAGE
 # python lips_reading.py --shape-predictor shape_predictor_68_face_landmarks.dat --video videos/*.mov --data data/aspect.dat -m false
 # python lips_reading.py --shape-predictor shape_predictor_68_face_landmarks.dat
-
+# python lips_reading.py --video words.mov --data data/dictionary_mean.dat -m true
+# python lips_reading.py --video videos/*.mov --data data/data_mean.dat
 # import the necessary packages
-from scipy.spatial import distance as dist
 from imutils.video import FileVideoStream
 from imutils.video import VideoStream
 from imutils import face_utils
-import numpy as np
 import argparse
 import imutils
 import time
 import dlib
 import cv2
 import feature_extractor as fe
+import words_finder as wf
+import math_utils as mutils
 import data_loader as dl
-from scipy.stats import pearsonr
 
 
-
-def find_word(feature_list):
-	data = dl.load(args["data"])
-
-	for key in data.keys():
-		for word in data[key]:
-			if len(word) == len(feature_list):
-				if np.allclose(feature_list, word, 0.2):
-					print("[INFO] founded {}".format(key))
-					return key
-			else:
-				# subarray all available with smallest len
-				if len(word) < len(feature_list):
-					small = word
-					big = feature_list
-				else:
-					small = feature_list
-					big = word
-
-				for i in range(0, (len(big) - len(small))):
-					candidate = big[i : (len(small)+i)]
-					if np.allclose(candidate, small, 0.2):
-						print("[INFO] founded {}".format(key))
-						return key
-
-
-	return "Unknown"
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
-ap.add_argument("-p", "--shape-predictor", required=True,
+ap.add_argument("-p", "--shape-predictor", default="shape_predictor_68_face_landmarks.dat",
 	help="path to facial landmark predictor")
-ap.add_argument("-v", "--video", type=str, default="",
+ap.add_argument("-v", "--video", type=str, required=True,
 	help="path to input video file")
-ap.add_argument("-d", "--data", type=str, default="",
+ap.add_argument("-d", "--data", type=str, required=True,
 	help="path the vocabulary to use")
-ap.add_argument("-m", "--multi", type=str, default="",
+ap.add_argument("-m", "--multi", type=str, default="false",
 	help="find start and end of the word in the stream")
 args = vars(ap.parse_args())
 
@@ -65,14 +39,19 @@ args = vars(ap.parse_args())
 
 MOUTH_AR_THRESH = 2
 MOUTH_AR_CONSEC_FRAMES = 15
-MOUTH_THRESH_MOVMENT = 0.5
+MOUTH_THRESH_MOVMENT = 0.3
 FRAME_POOL_COUNTER = 0
+MIN_FRAMES_COUNT = 6
 
 previousAR = [0] * MOUTH_AR_CONSEC_FRAMES
 
 # initialize the frame counters and the total number of blinks
 WORD_COUNTER = 0
 IS_SPEAKING = False
+
+dl.show_dictionary(args["data"])
+
+# print ("min len: {}".format(dl.min_word_len_in(args["data"])))
 
 # initialize dlib's face detector (HOG-based) and then create
 # the facial landmark predictor
@@ -156,9 +135,13 @@ while True:
 					break
 				else:
 					IS_SPEAKING = False
-					if len(pronounced_word) > 5:
-						print("word is {}".format(pronounced_word))
-						founded_word = find_word(pronounced_word)
+					if len(pronounced_word) > MIN_FRAMES_COUNT:
+						# print("word is {}".format(pronounced_word))
+						# founded_word = find_word(pronounced_word)
+						# founded_word = wf.find_by_mean(pronounced_word, args["data"])
+						founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
+						print ("word: {}, mean {}".format(founded_word, mutils.mean(pronounced_word)))
+
 					pronounced_word = []
 		else:
 			pronounced_word.append(mouthAR)
@@ -182,8 +165,6 @@ while True:
 	if key == ord("q"):
 		break
 
-print("Pronounced: {}".format(pronounced_word))
-print ("Finded word: {}".format(find_word(pronounced_word)))
 # do a bit of cleanup
 cv2.destroyAllWindows()
 vs.stop()
