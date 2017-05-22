@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 # USAGE
 # python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type aspect --video false
-
-#
+# python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type special
+# python populate_db.py --origin videos --destination data/dictionary --type special
 
 from imutils.video import FileVideoStream
 from imutils import face_utils
@@ -136,8 +136,7 @@ def populate_spacial():
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor(args["shape_predictor"])
 
-    # grab the indexes of the facial landmarks for the left and
-    # right eye, respectively
+    # grab the indexes of the facial landmarks for the mouth
     (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["mouth"]
 
     allfiles = [f for f in listdir(args["origin"]) if isfile(join(args["origin"], f))]
@@ -193,29 +192,13 @@ def populate_spacial():
                             # coordinates to compute the eye aspect ratio for both eyes
                             mouth = shape[lStart:lEnd]
 
-                            # compute the convex hull for the mouth
-                            if args["video"] is "true":
-                                mouthHull = cv2.convexHull(mouth)
-                                cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
-
-                            # check if user is speaking by comparing MOUTH_AR_CONSEC_FRAMES last
-                            # frames from the stream if one difference is > MOUTH_THRESH_MOVMENT
-                            # that means user is speaking
-
-                            mouthAR = fe.mouth_aspect_ratio(mouth)
-
-                            pronounced_word.append(mouthAR)
-
-                            # draw the log
-                            # show the frame
-                            if args["video"] is "true":
-                                cv2.putText(frame, "EAR: {:.2f}".format(mouthAR), (300, 30),
-                                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                            pronounced_word.append(mouth)
 
                         if args["video"] is "true":
                             cv2.imshow("Frame", frame)
 
                     words[dir].append(pronounced_word)
+                    # print ("word: {}".format(pronounced_word))
 
                     # do a bit of cleanup
                     cv2.destroyAllWindows()
@@ -223,19 +206,20 @@ def populate_spacial():
 
     # save into destination
 
-
-    with open("{}{}".format(args["destination"], "_special.dat"), 'wb') as handle:
+    with open("{}{}".format(args["destination"], "_spacial.dat"), 'wb') as handle:
         pickle.dump(words, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    # calculate a little bit different
+    # mean of mouth position on each frame
     mean = defaultdict(list)
     for key in words.keys():
-        word_features = words[key]
-        for word in word_features:
-            mean[key].append(sum(word) / float(len(word)))
+        for word in words[key]:  # [[x, y],[x, y]..[]] == length in frames of word each frame consists of 20 params [x, y]
+            mean_word = fe.mouth_mean_frame(word)
+            mean[key].append(mean_word)
 
-    print("Mean values: {}".format(mean))
+    print("mean {}".format(mean))
 
-    with open("{}{}".format(args["destination"], "_special_mean.dat"), 'wb') as handle:
+    with open("{}{}".format(args["destination"], "_spacial_frame_mean.dat"), 'wb') as handle:
         pickle.dump(mean, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
@@ -247,7 +231,7 @@ ap.add_argument("-o", "--origin", required=True,
 ap.add_argument("-d", "--destination", required=True, type=str, default="",
 	help="path to store extracted features")
 
-ap.add_argument("-p", "--shape-predictor", required=True,
+ap.add_argument("-p", "--shape-predictor", default="shape_predictor_68_face_landmarks.dat",
 	help="path to facial landmark predictor")
 
 ap.add_argument("-t", "--type", type=str, default="aspect",

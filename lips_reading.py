@@ -3,7 +3,7 @@
 # python lips_reading.py --shape-predictor shape_predictor_68_face_landmarks.dat --video videos/*.mov --data data/aspect.dat -m false
 # python lips_reading.py --shape-predictor shape_predictor_68_face_landmarks.dat
 # python lips_reading.py --video words.mov --data data/dictionary_mean.dat -m true
-# python lips_reading.py --video videos/*.mov --data data/data_mean.dat
+# python lips_reading.py --video videos/*.mov --data data/data_mean.dat --type spacial -m true
 # import the necessary packages
 from imutils.video import FileVideoStream
 from imutils.video import VideoStream
@@ -19,17 +19,18 @@ import math_utils as mutils
 import data_loader as dl
 
 
-
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--shape-predictor", default="shape_predictor_68_face_landmarks.dat",
-	help="path to facial landmark predictor")
+    help="path to facial landmark predictor")
 ap.add_argument("-v", "--video", type=str, required=True,
-	help="path to input video file")
+    help="path to input video file")
 ap.add_argument("-d", "--data", type=str, required=True,
-	help="path the vocabulary to use")
+    help="path the vocabulary to use")
+ap.add_argument("-t", "--type", type=str, required=True,
+    help="<aspect | spacial>")
 ap.add_argument("-m", "--multi", type=str, default="false",
-	help="find start and end of the word in the stream")
+    help="find start and end of the word in the stream")
 args = vars(ap.parse_args())
 
 
@@ -68,102 +69,117 @@ print("[INFO] starting video stream thread...")
 vs = FileVideoStream(args["video"]).start()
 
 if args["video"] is '':
-	fileStream = False
-	vs = VideoStream(src=0).start()
+    fileStream = False
+    vs = VideoStream(src=0).start()
 else:
-	fileStream = True
+    fileStream = True
 
 time.sleep(1.0)
-
 
 pronounced_word = list()
 founded_word = "dummy"
 # loop over frames from the video stream
 while True:
-	# if this is a file video stream, then we need to check if
-	# there any more frames left in the buffer to process
-	if fileStream and not vs.more():
-		break
+    # if this is a file video stream, then we need to check if
+    # there any more frames left in the buffer to process
+    if fileStream and not vs.more():
+        break
 
-	# grab the frame from the threaded video file stream, resize
-	# it, and convert it to grayscale
-	# channels)
-	frame = vs.read()
-	frame = imutils.resize(frame, width=450)
-	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    # grab the frame from the threaded video file stream, resize
+    # it, and convert it to grayscale
+    # channels)
+    frame = vs.read()
+    frame = imutils.resize(frame, width=450)
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-	# detect faces in the grayscale frame
-	rects = detector(gray, 0)
+    # detect faces in the grayscale frame
+    rects = detector(gray, 0)
 
-	# loop over the face detections
-	for rect in rects:
-		# determine the facial landmarks for the face region, then
-		# convert the facial landmark (x, y)-coordinates to a NumPy
-		# array
-		shape = predictor(gray, rect)
-		shape = face_utils.shape_to_np(shape)
+    # loop over the face detections
+    for rect in rects:
+        # determine the facial landmarks for the face region, then
+        # convert the facial landmark (x, y)-coordinates to a NumPy
+        # array
+        shape = predictor(gray, rect)
+        shape = face_utils.shape_to_np(shape)
 
-		# extract the left and right eye coordinates, then use the
-		# coordinates to compute the eye aspect ratio for both eyes
-		mouth = shape[lStart:lEnd]
+        # extract the left and right eye coordinates, then use the
+        # coordinates to compute the eye aspect ratio for both eyes
+        mouth = shape[lStart:lEnd]
 
-		# compute the convex hull for the left and right eye, then
-		# visualize each of the eyes
-		mouthHull = cv2.convexHull(mouth)
+        # compute the convex hull for the left and right eye, then
+        # visualize each of the eyes
+        mouthHull = cv2.convexHull(mouth)
 
-		cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
+        cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
 
-		# check if user is speaking by comparing MOUTH_AR_CONSEC_FRAMES last
-		# frames from the stream if one difference is > MOUTH_THRESH_MOVMENT
-		# that means user is speaking
+        # check if user is speaking by comparing MOUTH_AR_CONSEC_FRAMES last
+        # frames from the stream if one difference is > MOUTH_THRESH_MOVMENT
+        # that means user is speaking
 
-		mouthAR = fe.mouth_aspect_ratio(mouth)
+        if args["type"] == "aspect":
+            mouth_feature = fe.mouth_aspect_ratio(mouth)
+        elif args["type"] == "spacial":
+            mouth_feature = mouth
+        else:
+            print ("[ERROR] no suitable param <aspect | spacial>")
 
+        # in case of speaking into the wild
+        if args["multi"] == "true":
+            if FRAME_POOL_COUNTER == MOUTH_AR_CONSEC_FRAMES:
+                FRAME_POOL_COUNTER = 0
 
-		# in case of speaking into the wild
-		if args["multi"] == "true":
-			if FRAME_POOL_COUNTER == MOUTH_AR_CONSEC_FRAMES:
-				FRAME_POOL_COUNTER = 0
+            previousAR[FRAME_POOL_COUNTER] = mouth_feature
+            FRAME_POOL_COUNTER += 1
 
-			previousAR[FRAME_POOL_COUNTER] = mouthAR
-			FRAME_POOL_COUNTER += 1
+            for ar in previousAR:
+                if abs(mouth_feature - ar) > MOUTH_THRESH_MOVMENT:
+                    IS_SPEAKING = True
+                    pronounced_word.append(mouth_feature)
+                    break
+                else:
+                    IS_SPEAKING = False
+                    if len(pronounced_word) > MIN_FRAMES_COUNT:
+                        # print("word is {}".format(pronounced_word))
+                        # founded_word = find_word(pronounced_word)
+                        # founded_word = wf.find_by_mean(pronounced_word, args["data"])
+                        if args["type"] == "aspect":
+                            founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
+                            print ("word: {}, mean {}".format(founded_word, mutils.mean(pronounced_word)))
+                        elif args["type"] == "spacial":
+                            founded_word = wf.find_special_by_frame_mean(pronounced_word, args["data"])
+                            print ("word: {}, mean {}".format(founded_word, fe.mouth_mean_frame(pronounced_word)))
 
-			for ar in previousAR:
-				if abs(mouthAR - ar) > MOUTH_THRESH_MOVMENT:
-					IS_SPEAKING = True
-					pronounced_word.append(mouthAR)
-					break
-				else:
-					IS_SPEAKING = False
-					if len(pronounced_word) > MIN_FRAMES_COUNT:
-						# print("word is {}".format(pronounced_word))
-						# founded_word = find_word(pronounced_word)
-						# founded_word = wf.find_by_mean(pronounced_word, args["data"])
-						founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
-						print ("word: {}, mean {}".format(founded_word, mutils.mean(pronounced_word)))
+                    pronounced_word = []
+        else:
+            pronounced_word.append(mouth_feature)
 
-					pronounced_word = []
-		else:
-			pronounced_word.append(mouthAR)
+        # draw the total number of blinks on the frame along with
+        # the computed eye aspect ratio for the frame
+        cv2.putText(frame, "Speaking: {}".format(IS_SPEAKING), (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        cv2.putText(frame, "EAR: {:.2f}".format(mouth_feature), (300, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-		# draw the total number of blinks on the frame along with
-		# the computed eye aspect ratio for the frame
-		cv2.putText(frame, "Speaking: {}".format(IS_SPEAKING), (10, 30),
-			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-		cv2.putText(frame, "EAR: {:.2f}".format(mouthAR), (300, 30),
-			cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        if not IS_SPEAKING:
+            cv2.putText(frame, "Word: {}".format(founded_word), (150, 250),
+                cv2.FONT_ITALIC, 0.7, (0, 255, 0), 2)
 
-		if not IS_SPEAKING:
-			cv2.putText(frame, "Word: {}".format(founded_word), (150, 250),
-				cv2.FONT_ITALIC, 0.7, (0, 255, 0), 2)
+    # show the frame
+    cv2.imshow("Frame", frame)
+    key = cv2.waitKey(1) & 0xFF
 
-	# show the frame
-	cv2.imshow("Frame", frame)
-	key = cv2.waitKey(1) & 0xFF
- 
-	# if the `q` key was pressed, break from the loop
-	if key == ord("q"):
-		break
+    if args["multi"] == "false":
+        if args["type"] == "aspect":
+            founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
+            print ("[RESULT] word: {}, mean {}".format(founded_word, mutils.mean(pronounced_word)))
+        elif args["type"] == "spacial":
+            founded_word = wf.find_special_by_frame_mean(pronounced_word, args["data"])
+            print ("[RESULT] word spacial: {}, mean {}".format(founded_word, fe.mouth_mean_frame(pronounced_word)))
+
+    # if the `q` key was pressed, break from the loop
+    if key == ord("q"):
+        break
 
 # do a bit of cleanup
 cv2.destroyAllWindows()

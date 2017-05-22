@@ -6,6 +6,7 @@ import math
 from scipy.stats import pearsonr
 import math_utils as mutils
 
+
 def find_word_exactly(feature_list, path_to_data):
     data = dl.load(path_to_data)
 
@@ -30,10 +31,7 @@ def find_word_exactly(feature_list, path_to_data):
                         print("[INFO] founded {}".format(key))
                         return key
 
-
     return "Unknown"
-
-
 
 
 def find_by_mean(feature_list, path_to_data):
@@ -59,3 +57,11 @@ def find_by_mean_min_max_removed(feature_list, path_to_data):
     feature_list.remove(max(feature_list))
 
     return find_by_mean(feature_list, path_to_data)
+
+
+def find_special_by_frame_mean(mouth_points, path_to_data):
+    data = dl.load(path_to_data)
+
+
+
+
