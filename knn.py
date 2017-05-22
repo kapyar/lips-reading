@@ -2,67 +2,31 @@
 # USAGE
 # python knn.py --data data/aspect.dat
 
-print(__doc__)
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-from sklearn import neighbors, datasets
-import data_loader as dl
-import argparse
-
-# construct the argument parse and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-d", "--data", type=str, default="",
-	help="path to the extracted features")
-
-args = vars(ap.parse_args())
+from matplotlib import style
+style.use("ggplot")
+from sklearn.cluster import KMeans
 
 
-n_neighbors = 15
-
-# import some data to play with
-# iris = datasets.load_iris()
-# X = iris.data[:, :2]  # we only take the first two features. We could
-                      # avoid this ugly slicing by using a two-dim dataset
-data = dl.load(args["data"])
-X = np.empty([])
-y = data["один.mov"]
-print ("** {}".format(y))
-
-for d in data.keys():
-    np.append(X, np.array(data[d]))
+x = [1, 2, 5, 7, 8]
+y = [1, 2, 2, 3, 9]
 
 
-h = .02  # step size in the mesh
+X = np.array([
+    [1, 1],
+    [3, 3],
 
-# Create color maps
-cmap_light = ListedColormap(['#FFAAAA', '#AAFFAA', '#AAAAFF'])
-cmap_bold = ListedColormap(['#FF0000', '#00FF00', '#0000FF'])
+])
 
-for weights in ['uniform', 'distance']:
-    # we create an instance of Neighbours Classifier and fit the data.
-    clf = neighbors.KNeighborsRegressor(n_neighbors, weights=weights)
-    clf.fit(X, y)
+kmeans = KMeans(n_clusters=1)
+kmeans.fit(X)
 
-    # Plot the decision boundary. For that, we will assign a color to each
-    # point in the mesh [x_min, x_max]x[y_min, y_max].
-    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
-    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
 
-    # Put the result into a color plot
-    Z = Z.reshape(xx.shape)
-    plt.figure()
-    plt.pcolormesh(xx, yy, Z, cmap=cmap_light)
+centroids = kmeans.cluster_centers_
+print ("centroids {}".format(centroids))
 
-    # Plot also the training points
-    plt.scatter(X[:, 0], X[:, 1], c=y, cmap=cmap_bold)
-    plt.xlim(xx.min(), xx.max())
-    plt.ylim(yy.min(), yy.max())
-    plt.title("3-Class classification (k = %i, weights = '%s')"
-              % (n_neighbors, weights))
 
+plt.scatter(centroids[0][0], centroids[0][1])
 plt.show()
