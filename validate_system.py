@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 # USAGE
-# python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type aspect --video false
-# python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type special
-# python populate_db.py --origin videos --destination data/dictionary --type special
+# python validate_system.py -d data/dictionary_aspect.dat -o validation -t aspect -m full
+# python validate_system.py -d data/dictionary_aspect_mean.dat -o validation -t aspect -m mean
 
 from imutils.video import FileVideoStream
 from imutils import face_utils
@@ -45,8 +44,7 @@ print("[INFO] loading facial landmark predictor...")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(args["shape_predictor"])
 
-# grab the indexes of the facial landmarks for the left and
-# right eye, respectively
+
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["mouth"]
 
 allfiles = [f for f in listdir(args["origin"]) if isfile(join(args["origin"], f))]
@@ -68,11 +66,9 @@ for dir in listdir(args["origin"]):
         if isfile(join(args["origin"], join(dir, file))):
             if file.endswith(".mov"):
                 # start the video stream thread
-                expected_word = dir
-                total+=1
+                file_name = file[:-4]
+                total += 1
 
-                print(
-                "[INFO] starting video stream thread... file: {}".format(join(args["origin"], join(dir, file))))
                 vs = FileVideoStream(join(args["origin"], join(dir, file))).start()
 
                 fileStream = True
@@ -97,7 +93,7 @@ for dir in listdir(args["origin"]):
                     # detect faces in the grayscale frame
                     rects = detector(gray, 0)
                     # loop over the face detections
-                    print ("rects.length {}".format(len(rects)))
+
                     for rect in rects:
                         # determine the facial landmarks for the face region, then
                         # convert the facial landmark (x, y)-coordinates to a NumPy
@@ -105,8 +101,6 @@ for dir in listdir(args["origin"]):
                         shape = predictor(gray, rect)
                         shape = face_utils.shape_to_np(shape)
 
-                        # extract the left and right eye coordinates, then use the
-                        # coordinates to compute the eye aspect ratio for both eyes
                         mouth = shape[lStart:lEnd]
 
                         # todo add method choose
@@ -133,10 +127,15 @@ for dir in listdir(args["origin"]):
                 elif args["type"] == "spacial":
                     print ("[INFO] spacial part")
 
+                print ("Expected: {}, actual: {}".format(dir, founded_word))
 
-                print ("Expected: {}, actual: {}".format(expected_word, founded_word))
+                if dir in founded_word:
+                    founded += 1
+                else:
+                    miss += 1
 
                 # do a bit of cleanup
                 cv2.destroyAllWindows()
                 vs.stop()
-            print ("[RESULT] founded: {}, miss: {}   {}%".format(founded, miss, founded/float(total)))
+
+print ("[RESULT] founded: {}, miss: {}  {}".format(founded, miss, (founded/float(total))))

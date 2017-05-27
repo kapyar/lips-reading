@@ -3,7 +3,6 @@
 import data_loader as dl
 import numpy as np
 import math
-from scipy.stats import pearsonr
 import math_utils as mutils
 
 
@@ -26,7 +25,7 @@ def find_word_exactly(feature_list, path_to_data):
                     big = word
 
                 for i in range(0, (len(big) - len(small))):
-                    candidate = big[i : (len(small)+i)]
+                    candidate = big[i: (len(small)+i)]
                     if np.allclose(candidate, small, 0.2):
                         print("[INFO] founded {}".format(key))
                         return key

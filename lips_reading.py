@@ -34,10 +34,6 @@ ap.add_argument("-m", "--multi", type=str, default="false",
 args = vars(ap.parse_args())
 
 
-# define two constants, one for the eye aspect ratio to indicate
-# movements and then a second constant for the number of consecutive
-# frames the mouth must be at the same position below the threshold
-
 MOUTH_AR_THRESH = 2
 MOUTH_AR_CONSEC_FRAMES = 15
 MOUTH_THRESH_MOVMENT = 0.3
@@ -60,8 +56,7 @@ print("[INFO] loading facial landmark predictor...")
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(args["shape_predictor"])
 
-# grab the indexes of the facial landmarks for the left and
-# right eye, respectively
+
 (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["mouth"]
 
 # start the video stream thread
@@ -103,12 +98,8 @@ while True:
         shape = predictor(gray, rect)
         shape = face_utils.shape_to_np(shape)
 
-        # extract the left and right eye coordinates, then use the
-        # coordinates to compute the eye aspect ratio for both eyes
         mouth = shape[lStart:lEnd]
 
-        # compute the convex hull for the left and right eye, then
-        # visualize each of the eyes
         mouthHull = cv2.convexHull(mouth)
 
         cv2.drawContours(frame, [mouthHull], -1, (0, 255, 0), 1)
@@ -154,11 +145,9 @@ while True:
         else:
             pronounced_word.append(mouth_feature)
 
-        # draw the total number of blinks on the frame along with
-        # the computed eye aspect ratio for the frame
         cv2.putText(frame, "Speaking: {}".format(IS_SPEAKING), (10, 30),
             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        cv2.putText(frame, "EAR: {:.2f}".format(mouth_feature), (300, 30),
+        cv2.putText(frame, "AR: {:.2f}".format(mouth_feature), (300, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         if not IS_SPEAKING:

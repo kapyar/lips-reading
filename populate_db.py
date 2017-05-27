@@ -25,8 +25,6 @@ def populate_aspect_ratio():
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor(args["shape_predictor"])
 
-    # grab the indexes of the facial landmarks for the left and
-    # right eye, respectively
     (lStart, lEnd) = face_utils.FACIAL_LANDMARKS_IDXS["mouth"]
 
     allfiles = [f for f in listdir(args["origin"]) if isfile(join(args["origin"], f))]
@@ -79,8 +77,6 @@ def populate_aspect_ratio():
                             shape = predictor(gray, rect)
                             shape = face_utils.shape_to_np(shape)
 
-                            # extract the left and right eye coordinates, then use the
-                            # coordinates to compute the eye aspect ratio for both eyes
                             mouth = shape[lStart:lEnd]
 
                             # compute the convex hull for the mouth
@@ -99,7 +95,7 @@ def populate_aspect_ratio():
                             # draw the log
                             # show the frame
                             if args["video"] is "true":
-                                cv2.putText(frame, "EAR: {:.2f}".format(mouthAR), (300, 30),
+                                cv2.putText(frame, "AR: {:.2f}".format(mouthAR), (300, 30),
                                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
                         if args["video"] is "true":
@@ -123,8 +119,6 @@ def populate_aspect_ratio():
         word_features = words[key]
         for word in word_features:
             mean[key].append(sum(word) / float(len(word)))
-
-    print("Mean values: {}".format(mean))
 
     with open("{}{}".format(args["destination"], "_aspect_mean.dat"), 'wb') as handle:
         pickle.dump(mean, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -188,8 +182,6 @@ def populate_spacial():
                             shape = predictor(gray, rect)
                             shape = face_utils.shape_to_np(shape)
 
-                            # extract the left and right eye coordinates, then use the
-                            # coordinates to compute the eye aspect ratio for both eyes
                             mouth = shape[lStart:lEnd]
 
                             pronounced_word.append(mouth)
