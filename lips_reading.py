@@ -169,17 +169,19 @@ while True:
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
 
-    if args["multi"] == "false":
-        if args["type"] == "aspect":
-            founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
-            print ("[RESULT] word: {}, mean {}".format(founded_word, mutils.mean(pronounced_word)))
-        elif args["type"] == "spacial":
-            founded_word = wf.find_special_by_frame_mean(pronounced_word, args["data"])
-            print ("[RESULT] word spacial: {}, mean {}".format(founded_word, fe.mouth_mean_frame(pronounced_word)))
-
-    # if the `q` key was pressed, break from the loop
     if key == ord("q"):
         break
+
+if args["multi"] == "false":
+    if args["type"] == "aspect":
+        founded_word = wf.find_by_mean(pronounced_word, args["data"])
+        print ("[RESULT] word: {}, mean {} expected {}".format(founded_word, mutils.mean(pronounced_word), args["video"]))
+    elif args["type"] == "spacial":
+        founded_word = wf.find_special_by_frame_mean(pronounced_word, args["data"])
+        print ("[RESULT] word spacial: {}, mean {}".format(founded_word, fe.mouth_mean_frame(pronounced_word)))
+
+# if the `q` key was pressed, break from the loop
+
 
 # do a bit of cleanup
 cv2.destroyAllWindows()
