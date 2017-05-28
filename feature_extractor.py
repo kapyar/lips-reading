@@ -24,8 +24,8 @@ def spacial_centroid(word):
 
 # as result 20 points
 def spacial_mean_points(word):
-    sumator = list()
-    for frame in word:
+    sumator = word[0]
+    for frame in word[1:]:
         sumator += frame
 
     return sumator/float(20)
