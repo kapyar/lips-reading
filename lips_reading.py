@@ -131,15 +131,12 @@ while True:
                 else:
                     IS_SPEAKING = False
                     if len(pronounced_word) > MIN_FRAMES_COUNT:
-                        # print("word is {}".format(pronounced_word))
-                        # founded_word = find_word(pronounced_word)
-                        # founded_word = wf.find_by_mean(pronounced_word, args["data"])
                         if args["type"] == "aspect":
                             founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
                             print ("word: {}, mean {}".format(founded_word, mutils.mean(pronounced_word)))
                         elif args["type"] == "spacial":
                             founded_word = wf.find_special_by_frame_mean(pronounced_word, args["data"])
-                            print ("word: {}, mean {}".format(founded_word, fe.mouth_mean_frame(pronounced_word)))
+                            print ("word: {}, mean {}".format(founded_word, fe.spacial_centroid(pronounced_word)))
 
                     pronounced_word = []
         else:
@@ -167,7 +164,7 @@ if args["multi"] == "false":
         print ("[RESULT] word: {}, mean {} expected {}".format(founded_word, mutils.mean(pronounced_word), args["video"]))
     elif args["type"] == "spacial":
         founded_word = wf.find_special_by_frame_mean(pronounced_word, args["data"])
-        print ("[RESULT] word spacial: {}, mean {}".format(founded_word, fe.mouth_mean_frame(pronounced_word)))
+        print ("[RESULT] word spacial: {}, mean {}".format(founded_word, fe.spacial_centroid(pronounced_word)))
 
 # if the `q` key was pressed, break from the loop
 

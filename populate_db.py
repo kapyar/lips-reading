@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 # USAGE
-# python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type aspect --video false
-# python populate_db.py --origin videos --destination data/dictionary --shape-predictor shape_predictor_68_face_landmarks.dat --type special
-# python populate_db.py --origin videos --destination data/dictionary --type special
+# python populate_db.py --origin videos --destination data/dictionary --type aspect --size 5
+# python populate_db.py --origin videos --destination data/dictionary --type special --size 5
 
 from imutils.video import FileVideoStream
 from imutils import face_utils
@@ -16,6 +15,7 @@ import feature_extractor as fe
 import pickle
 import time
 from collections import defaultdict
+import consts
 
 
 def populate_aspect_ratio():
@@ -37,6 +37,8 @@ def populate_aspect_ratio():
 
         if dir == ".DS_Store":
             continue
+
+        number_of_added_words = 0
 
         for file in listdir(join(args["origin"], dir)):
             if isfile(join(args["origin"], join(dir, file))):
@@ -103,6 +105,11 @@ def populate_aspect_ratio():
 
                     print ("add word {}".format(dir))
                     words[dir].append(pronounced_word)
+                    number_of_added_words += 1
+
+                    if number_of_added_words >= args["size"]:
+                        print ("go to new word")
+                        break
 
                     # do a bit of cleanup
                     cv2.destroyAllWindows()
@@ -111,7 +118,7 @@ def populate_aspect_ratio():
     # save into destination
 
 
-    with open("{}{}".format(args["destination"], "_aspect.dat"), 'wb') as handle:
+    with open("{}{}".format(args["destination"], consts.ASPECT), 'wb') as handle:
         pickle.dump(words, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     mean = defaultdict(list)
@@ -120,8 +127,9 @@ def populate_aspect_ratio():
         for word in word_features:
             mean[key].append(sum(word) / float(len(word)))
 
-    with open("{}{}".format(args["destination"], "_aspect_mean.dat"), 'wb') as handle:
+    with open("{}{}".format(args["destination"], consts.ASPECT_MEAN), 'wb') as handle:
         pickle.dump(mean, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 def populate_spacial():
     # initialize dlib's face detector (HOG-based) and then create
@@ -143,6 +151,8 @@ def populate_spacial():
 
         if dir == ".DS_Store":
             continue
+
+        number_of_added_words = 0
 
         for file in listdir(join(args["origin"], dir)):
             if isfile(join(args["origin"], join(dir, file))):
@@ -190,7 +200,12 @@ def populate_spacial():
                             cv2.imshow("Frame", frame)
 
                     words[dir].append(pronounced_word)
-                    # print ("word: {}".format(pronounced_word))
+
+                    number_of_added_words += 1
+
+                    if number_of_added_words >= args["size"]:
+                        print ("go to new word")
+                        break
 
                     # do a bit of cleanup
                     cv2.destroyAllWindows()
@@ -198,7 +213,7 @@ def populate_spacial():
 
     # save into destination
 
-    with open("{}{}".format(args["destination"], "_spacial.dat"), 'wb') as handle:
+    with open("{}{}".format(args["destination"], consts.SPACIAL), 'wb') as handle:
         pickle.dump(words, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # calculate a little bit different
@@ -206,13 +221,22 @@ def populate_spacial():
     mean = defaultdict(list)
     for key in words.keys():
         for word in words[key]:  # [[x, y],[x, y]..[]] == length in frames of word each frame consists of 20 params [x, y]
-            mean_word = fe.mouth_mean_frame(word)
+            mean_word = fe.spacial_centroid(word)
             mean[key].append(mean_word)
 
-    print("mean {}".format(mean))
-
-    with open("{}{}".format(args["destination"], "_spacial_frame_mean.dat"), 'wb') as handle:
+    with open("{}{}".format(args["destination"], consts.SPACIAL_CENTROID), 'wb') as handle:
         pickle.dump(mean, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # calculate a little bit different
+        # mean of mouth position on each frame
+        points_mean_shift = defaultdict(list)
+        for key in words.keys():
+            for word in words[key]:
+                mean_word = fe.spacial_mean_points(word)
+                points_mean_shift[key].append(mean_word)
+
+    with open("{}{}".format(args["destination"], consts.SPACIAL_MEAN_SHIFT), 'wb') as handle:
+        pickle.dump(points_mean_shift, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 # construct the argument parse and parse the arguments
@@ -222,6 +246,9 @@ ap.add_argument("-o", "--origin", required=True,
 
 ap.add_argument("-d", "--destination", required=True, type=str, default="",
 	help="path to store extracted features")
+
+ap.add_argument("-s", "--size", required=True, type=int, default="",
+	help="size of trained data")
 
 ap.add_argument("-p", "--shape-predictor", default="shape_predictor_68_face_landmarks.dat",
 	help="path to facial landmark predictor")
@@ -238,5 +265,5 @@ print("[INFO] args: {}".format(args))
 if args["type"] == "aspect":
     populate_aspect_ratio()
 else:
-   populate_spacial()
+    populate_spacial()
 

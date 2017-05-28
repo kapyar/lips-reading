@@ -12,10 +12,20 @@ def mouth_aspect_ratio(mouth_frame):
     return ration
 
 
-def mouth_mean_frame(word):
+# result list of float
+def spacial_centroid(word):
     mean_frames = list()
     for frame in word:
         mean_frames.append(sum(frame) / float(len(frame)))
     mean_word = sum(mean_frames) / float(len(mean_frames))
 
     return mean_word
+
+
+# as result 20 points
+def spacial_mean_points(word):
+    sumator = list()
+    for frame in word:
+        sumator += frame
+
+    return sumator/float(20)

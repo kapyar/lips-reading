@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
 # USAGE
-# python validate_system.py -d data/dictionary_aspect.dat -o validation -t aspect -m full
-# python validate_system.py -d data/dictionary_aspect_mean.dat -o validation -t aspect -m mean
+# python validate_system.py -d data/dictionary -o validation -t aspect -m full
+# python validate_system.py -d data/dictionary -o validation -t aspect -m mean
+# python validate_system.py -d data/dictionary -o validation -t aspect -m mean_min_max
+
+# python validate_system.py -d data/dictionary -o validation -t spatial -m full
+# python validate_system.py -d data/dictionary -o validation -t spatial -m mean
+# python validate_system.py -d data/dictionary -o validation -t spatial -m centroid
 
 from imutils.video import FileVideoStream
 from imutils import face_utils
@@ -15,6 +20,7 @@ import feature_extractor as fe
 import words_finder as wf
 import time
 from collections import defaultdict
+import consts
 
 
 # construct the argument parse and parse the arguments
@@ -31,8 +37,9 @@ ap.add_argument("-p", "--shape-predictor", default="shape_predictor_68_face_land
 ap.add_argument("-t", "--type", type=str, default="aspect",
 	help="aspect based or full points approach params: <aspect | special>")
 
-ap.add_argument("-m", "--method", type=str, default="aspect",
-	help="aspect based or full points approach params: <full | mean | mean_min_max | mean_frame>")
+ap.add_argument("-m", "--method", type=str, default="full",
+	help="aspect based or full points approach params: aspect: <full | mean | mean_min_max | mean_frame>"
+         "spacial: <full | mean | centroid>")
 
 
 args = vars(ap.parse_args())
@@ -112,20 +119,28 @@ for dir in listdir(args["origin"]):
                         if args["type"] == "spacial":
                             pronounced_word.append(shape)
 
-                        # add break in the end ???
-
                 # find word from db
                 if args["type"] == "aspect":
                     if args["method"] == "mean":
-                        founded_word = wf.find_by_mean(pronounced_word, args["data"])
+                        founded_word = wf.find_by_mean(pronounced_word, args["data"] + consts.ASPECT_MEAN)
                     elif args["method"] == "mean_min_max":
-                        founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"])
+                        founded_word = wf.find_by_mean_min_max_removed(pronounced_word, args["data"] + consts.ASPECT)
                     elif args["method"] == "full":
-                        founded_word = wf.find_word_exactly(pronounced_word, args["data"])
+                        founded_word = wf.find_word_exactly(pronounced_word, args["data"] + consts.ASPECT)
                     else:
                         print ("[INFO] no parameter {} ".format(args["method"]))
                 elif args["type"] == "spacial":
-                    print ("[INFO] spacial part")
+                    # "spacial: <full | mean | centroid>"
+                    if args["method"] == "full":
+                        founded_word = wf.spacial_full(pronounced_word, args["data"] + consts.SPACIAL)
+                    elif args["method"] == "mean":
+                        founded_word = wf.spacial_mean_points_shift(pronounced_word, args["data"] + consts.SPACIAL_MEAN_SHIFT)
+                    elif args["method"] == "centroid":
+                        founded_word = wf.spacial_centroid(pronounced_word, args["data"] + consts.SPACIAL_CENTROID)
+                    else:
+                        print ("[INFO] no METHOD parameter {} ".format(args["method"]))
+                else:
+                    print ("[INFO] no TYPE parameter {} ".format(args["type"]))
 
                 print ("Expected: {}, actual: {}".format(dir, founded_word))
 
@@ -138,4 +153,4 @@ for dir in listdir(args["origin"]):
                 cv2.destroyAllWindows()
                 vs.stop()
 
-print ("[RESULT] founded: {}, miss: {}  {}".format(founded, miss, (founded/float(total))))
+print ("[RESULT] founded: {}, miss: {}  {}".format(founded, miss, (founded/float(total) * 100)))

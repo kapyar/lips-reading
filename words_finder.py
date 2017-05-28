@@ -5,6 +5,12 @@ import numpy as np
 import math
 import math_utils as mutils
 
+'''
+
+    Aspect ration methods
+    
+'''
+
 
 def find_word_exactly(feature_list, path_to_data):
     data = dl.load(path_to_data)
@@ -58,8 +64,25 @@ def find_by_mean_min_max_removed(feature_list, path_to_data):
     return find_by_mean(feature_list, path_to_data)
 
 
-def find_special_by_frame_mean(mouth_points, path_to_data):
+
+'''
+    Spacial methods
+'''
+
+
+def spacial_full(mouth_points, path_to_data):
     data = dl.load(path_to_data)
+
+
+def spacial_mean_points_shift(mouth_points, path_to_data):
+    data = dl.load(path_to_data)
+
+
+def spacial_centroid(mouth_points, path_to_data):
+    data = dl.load(path_to_data)
+
+
+
 
 
 
