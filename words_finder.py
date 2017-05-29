@@ -60,7 +60,7 @@ def find_by_mean(feature_list, path_to_data):
     for key in data.keys():
         words = data[key]
         for word in words:
-            if math.fabs(word - mean) < best_diff:
+            if math.fabs(mutils.mean(word) - mean) < best_diff:
                 best_candidate = key
                 best_diff = math.fabs(word - mean)
 
@@ -83,7 +83,7 @@ def find_by_mean_min_max_removed(feature_list, path_to_data):
 def spacial_full(mouth_points, path_to_data):
     data = dl.load(path_to_data)
 
-    # todo
+    # todoф
 
     return "Unknown"
 
@@ -103,6 +103,7 @@ def spacial_mean_points_shift(mouth_points, path_to_data):
             temp_error = 0
             for a, b in zip(mouth_points, word):
                 temp_error += np.linalg.norm(a - b)
+                # todo might be bug
                 if temp_error < best_error:
                     best_candidate = key
                     best_error = temp_error

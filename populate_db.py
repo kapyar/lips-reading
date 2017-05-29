@@ -103,7 +103,6 @@ def populate_aspect_ratio():
                         if args["video"] is "true":
                             cv2.imshow("Frame", frame)
 
-                    print ("add word {}".format(dir))
                     words[dir].append(pronounced_word)
                     number_of_added_words += 1
 
